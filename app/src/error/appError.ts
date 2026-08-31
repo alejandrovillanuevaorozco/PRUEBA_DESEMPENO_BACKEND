@@ -1,10 +1,8 @@
-class AppError extends Error{
+export class AppError extends Error {
     constructor(
-        public status : number,
-        message: string
+        message: string,
+        public status: number
     ){
         super(message)
     }
 }
-
-export default AppError

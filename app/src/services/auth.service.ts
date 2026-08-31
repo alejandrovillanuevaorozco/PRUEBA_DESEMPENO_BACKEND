@@ -1,187 +1,50 @@
-import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
-
-import User from "../models/user.model";
-import { RefreshToken } from "../models/refreshToken.model";
-import { Audit } from "../models/audit.model";
-import Membership from "../models/membership.model";
-import { Benefit } from "../models/benefit.model";
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { User, Role } from '../models/associations';
+import { RegisterDTO, LoginDTO } from '../dto/auth.dto';
+import { AppError } from '../error/appError';
 
 export class AuthService {
+  async register(data: RegisterDTO) {
+    const role = await Role.findOne({ where: { name: data.roleName } });
+    if (!role) throw new AppError('El rol especificado no existe', 400);
 
-    // Configuración de seguridad
-    private readonly MAX_FAILED_ATTEMPTS = 5;
-    private readonly LOCK_TIME_MS = 15 * 60 * 1000; // 15 minutos
+    const existingUser = await User.findOne({ where: { email: data.email } });
+    if (existingUser) throw new AppError('El correo ya está en uso', 400);
 
-    public async login(
-        email: string,
-        password: string,
-        ip: string,
-        device: string
-    ) {
+    const hashedPassword = await bcrypt.hash(data.password, 10);
 
-        // 1. Buscar usuario
-        const user = await User.findOne({
-            where: { email }
-        });
+    const user = await User.create({
+      name: data.name,
+      email: data.email,
+      password: hashedPassword,
+      role_id: role.id
+    });
 
-        if (!user) {
-            throw new Error("Credenciales inválidas");
-        }
+    const { password, ...userWithoutPassword } = user.toJSON();
+    return userWithoutPassword;
+  }
 
-        // 2. Verificar que el correo haya sido confirmado
-        if (!user.isVerified) {
-            throw new Error(
-                "Debes verificar tu correo electrónico antes de iniciar sesión"
-            );
-        }
+  async login(data: LoginDTO) {
+    const user = await User.findOne({
+      where: { email: data.email },
+      include: [{ model: Role, as: 'role' }]
+    });
 
-        // 3. Verificar que la cuenta esté activa
-        if (user.status !== "ACTIVO") {
-            throw new Error(
-                "La cuenta no se encuentra activa"
-            );
-        }
-
-        // 4. Verificar si la cuenta continúa bloqueada
-        if (
-            user.lockoutUntil &&
-            user.lockoutUntil.getTime() > Date.now()
-        ) {
-            throw new Error(
-                "Cuenta bloqueada. Intenta de nuevo en 15 minutos."
-            );
-        }
-
-        // 5. Si el tiempo de bloqueo ya terminó,
-        // reiniciar los intentos fallidos
-        if (
-            user.lockoutUntil &&
-            user.lockoutUntil.getTime() <= Date.now()
-        ) {
-            user.failedLoginAttempts = 0;
-            user.lockoutUntil = null;
-
-            await user.save();
-        }
-
-        // 6. Validar contraseña
-        const isValid = await bcrypt.compare(
-            password,
-            user.password
-        );
-
-        // 7. Contraseña incorrecta
-        if (!isValid) {
-
-            user.failedLoginAttempts += 1;
-
-            // Bloquear después de 5 intentos
-            if (
-                user.failedLoginAttempts >=
-                this.MAX_FAILED_ATTEMPTS
-            ) {
-                user.lockoutUntil = new Date(
-                    Date.now() + this.LOCK_TIME_MS
-                );
-            }
-
-            await user.save();
-
-            // Registrar intento fallido
-            await Audit.create({
-                userId: user.id,
-                event: "LOGIN_FAILED",
-                ip,
-                device
-            });
-
-            throw new Error("Credenciales inválidas");
-        }
-
-        // 8. Contraseña correcta
-        // Reiniciar intentos fallidos y bloqueo
-        user.failedLoginAttempts = 0;
-        user.lockoutUntil = null;
-
-        await user.save();
-
-        // 9. Crear payload para los tokens
-        const payload = {
-            userId: user.id,
-            roleId: user.roleId
-        };
-
-        // 10. Crear Access Token
-        const accessToken = jwt.sign(
-            payload,
-            process.env.JWT_ACCESS_SECRET!,
-            {
-                expiresIn: "15m"
-            }
-        );
-
-        // 11. Crear Refresh Token
-        const refreshToken = jwt.sign(
-            payload,
-            process.env.JWT_REFRESH_SECRET!,
-            {
-                expiresIn: "7d"
-            }
-        );
-
-        // 12. Eliminar Refresh Tokens anteriores
-        await RefreshToken.destroy({
-            where: {
-                userId: user.id
-            }
-        });
-
-        // 13. Guardar nuevo Refresh Token
-        await RefreshToken.create({
-            userId: user.id,
-            token: refreshToken,
-            expiresAt: new Date(
-                Date.now() + 7 * 24 * 60 * 60 * 1000
-            )
-        });
-
-        // 14. Registrar acceso exitoso
-        await Audit.create({
-            userId: user.id,
-            event: "LOGIN_SUCCESS",
-            ip,
-            device
-        });
-
-        // 15. Buscar membresía del usuario
-        const membership = await Membership.findOne({
-            where: {
-                userId: user.id
-            }
-        });
-
-        // 16. Buscar beneficios activos
-        const activeBenefits = await Benefit.findAll({
-            where: {
-                userId: user.id,
-                status: "active"
-            }
-        });
-
-        // 17. Retornar información del usuario
-        return {
-            accessToken,
-            refreshToken,
-
-            membershipInfo: membership,
-
-            activeBenefits,
-
-            profile: {
-                name: `${user.firstName} ${user.lastName}`,
-                email: user.email
-            }
-        };
+    if (!user || !(await bcrypt.compare(data.password, user.password))) {
+      throw new AppError('Credenciales inválidas', 401);
     }
+
+    const roleName = (user as any).role.name;
+    const token = jwt.sign(
+      { id: user.id, role: roleName }, 
+      process.env.JWT_SECRET as string, 
+      { expiresIn: '8h' }
+    );
+
+    return { 
+      token, 
+      user: { id: user.id, name: user.name, email: user.email, role: roleName } 
+    };
+  }
 }

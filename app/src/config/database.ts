@@ -24,7 +24,7 @@ import { Sequelize } from "sequelize";
  * Instancia de Sequelize configurada para PostgreSQL.
  * Se conecta utilizando las credenciales y parámetros definidos en las variables de entorno.
  */
-const sequelize = new Sequelize(
+export const sequelize = new Sequelize(
   process.env.POSTGRES_DB as string,
   process.env.POSTGRES_USER as string,
   process.env.POSTGRES_PASSWORD as string,
@@ -36,4 +36,3 @@ const sequelize = new Sequelize(
   }
 );
 
-export default sequelize;

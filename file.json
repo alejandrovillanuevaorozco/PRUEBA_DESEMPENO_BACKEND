@@ -1,0 +1,18 @@
+{
+  "roles": [
+    { "id": 1, "name": "Administrador" },
+    { "id": 2, "name": "Gestor de Solicitudes" }
+  ],
+  "users": [
+    { "name": "Admin Principal", "email": "admin@riwi.com", "password": "123", "role_id": 1 }
+  ],
+  "clinics": [
+    { "name": "Clínica Central", "nit": "900123456-1", "manager": "Dr. Juan Perez" }
+  ],
+  "warehouses": [
+    { "name": "Almacén Norte", "location": "Zona Norte" }
+  ],
+  "medicines": [
+    { "name": "Paracetamol 500mg", "description": "Caja x 100", "stock": 5000 }
+  ]
+}

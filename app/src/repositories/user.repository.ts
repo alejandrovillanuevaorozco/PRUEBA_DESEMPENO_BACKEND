@@ -1,66 +1,50 @@
-// app/src/repositories/user.repository.ts
-
-import User, { UserCreationAttributes } from "../models/user.model";
+import { User, Role } from "../models/associations";
 import { IUserRepository } from "./interfaces/user.repository.interface";
-import Membership from "../models/membership.model";
-import MembershipLevel from "../models/membership-level.model";
 
 /**
  * Repositorio de Usuarios
  * -----------------------
  * Implementa el patrón Repository para encapsular todas las operaciones
  * de persistencia relacionadas con la entidad User.
- *
- * Esta clase es la única responsable de interactuar con Sequelize.
  */
-
 class UserRepository implements IUserRepository {
 
     /**
      * Crea un nuevo usuario.
      */
-    async create(data: UserCreationAttributes): Promise<User> {
-
-        // crea un nuevo usuario en la base de datos usando los datos de data
-        // espera que se cree el usuario y lo devuelve creado
+    async create(data: any): Promise<User> {
         return await User.create(data);
-
     }
 
     /**
-     * Obtiene todos los usuarios.
+     * Obtiene todos los usuarios sin la contraseña y con su rol.
      */
     async findAll(): Promise<User[]> {
-        // sequealize consulta la tabla users
         return await User.findAll({
-            // ademas de los datos del usuario, trae informacion de otras tablas
-            // que estan relacionadas con el 
+            attributes: { exclude: ['password'] },
             include: [
                 {
-                    // Incluye la membresía asociada al usuario.
-                    model: Membership,
-                    as: "membership",
-
-                    // Incluye el nivel de esa membresía.
-                    include: [
-                        {
-                            model: MembershipLevel,
-                            as: "level"
-                        }
-                    ]
+                    model: Role,
+                    as: 'role'
                 }
             ]
         });
     }   
     
-     async findByEmail(email: string): Promise<User | null> {
-      return await User.findOne({
-        where: {
-            email: email,
-        }
-    });
-}
-
+    /**
+     * Busca un usuario por su correo electrónico (usado en el Login).
+     */
+    async findByEmail(email: string): Promise<User | null> {
+        return await User.findOne({
+            where: { email },
+            include: [
+                {
+                    model: Role,
+                    as: 'role'
+                }
+            ]
+        });
+    }
 }
 
 export default new UserRepository();

@@ -9,9 +9,8 @@
  */
 
 import app from "./server";
-import sequelize from "./config/database";
+import { sequelize } from "./config/database";
 import "./models/associations";
-import { startSeatLockPurgerJob } from "./jobs/seat-lock-purger.job";
 
 
 const PORT = process.env.APP_PORT || 3000;
@@ -25,9 +24,6 @@ const start = async () => {
       alter: true
     }); // crea tablas si no existen
 
-    if (process.env.NODE_ENV !== "test") {
-      startSeatLockPurgerJob();
-    }
 
 
 

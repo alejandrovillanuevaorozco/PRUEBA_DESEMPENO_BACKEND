@@ -1,5 +1,3 @@
-// app/src/server.ts
-
 /**
  * Se encarga únicamente de configurar la aplicación Express: middlewares, rutas, swagger, etc.
  * No arranca el servidor ni toca la base de datos.
@@ -7,39 +5,34 @@
 */
 
 import express from "express";
-import swaggerUi from "swagger-ui-express";
-import { swaggerSpec } from "./docs/swagger";
 import cors from "cors";
 import { corsOptions } from "./config/cors";
-import userRoutes from "./routes/user.routes";
-import movieRoutes from "./routes/movie.routes";
-import countryRoutes from "./routes/country.routes";
-import departmentRoutes from "./routes/department.routes";
-import cityRoutes from "./routes/city.routes";
+import userRoutes from './routes/user.routes';
+
+// 1. Importación de todas las rutas de RiwiMediCare Plus
 import authRoutes from './routes/auth.routes';
-import cinemaComplexRoutes from "./routes/cinema.complex.routes";
-import functionRoutes from "./routes/function.routes";
-import reservationRoutes from "./routes/seat-reservation.routes";
+import seederRoutes from './routes/seeder.routes';
+import adminRoutes from './routes/admin.routes';
+import requestRoutes from './routes/request.routes';
+
+// 2. Importación de la nueva configuración de Swagger
+import { swaggerDocs } from "./docs/swagger";
 
 const app = express();
+
+// Middlewares globales
 app.use(cors(corsOptions));
-
-
 app.use(express.json());
 
-// Rutas
-app.use("/api/users", userRoutes);
+// 3. Montaje de Rutas
 app.use("/api/auth", authRoutes);
-app.use("/api/movies", movieRoutes);
-app.use("/api/countries", countryRoutes);
-app.use("/api/departments", departmentRoutes);
-app.use("/api/cities", cityRoutes);
-app.use('/auth', authRoutes);
-app.use("/api/complex", cinemaComplexRoutes);
-app.use("/api/functions", functionRoutes);
-app.use("/api/reservations", reservationRoutes);
+app.use("/api/seeders", seederRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/requests", requestRoutes);
+app.use('/api/users', userRoutes);
 
-// Swagger
-app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+// 4. Inicialización de Swagger
+const PORT = process.env.APP_PORT || 3000;
+swaggerDocs(app, PORT);
 
 export default app;

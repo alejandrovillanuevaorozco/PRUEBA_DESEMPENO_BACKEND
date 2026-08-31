@@ -1,61 +1,26 @@
-
-/**
- * Rutas de Usuario
- * ----------------
- * Este archivo define las rutas HTTP relacionadas con la entidad `User`.
- * 
- * Endpoints disponibles:
- *  - `POST /users/` : Crear un nuevo usuario.
- *  - `GET /users/`  : Obtener todos los usuarios registrados.
- * 
- * Cada ruta se conecta con su respectivo controlador.
- */
-
-import { Router } from "express";
-import { createUser, getUsers } from "../controllers/user.controller";
+import { Router } from 'express';
+import userService from '../services/user.service';
+import { verifyToken, checkRole } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-
 /**
- * GET /
- * ----
- * Obtiene la lista completa de usuarios registrados en la base de datos.
- * 
- * Response:
- *  - 200 OK: Devuelve un array de usuarios en formato JSON.
- * 
- * 
  * @swagger
  * /api/users:
  *   get:
- *     summary: Obtener todos los usuarios
+ *     summary: Obtiene todos los usuarios registrados
  *     tags: [Users]
  *     responses:
  *       200:
- *         description: Lista de usuarios obtenida exitosamente
- *         content:
- *           application/json:
- *             example: 
- *               - id: 1
- *                 name: "John Doe"
- *                 email: "john.doe@example.com"
- *               - id: 2
- *                 name: "Jane Doe"
- *                 email: "john.doe@example.com"
- *       400:
- *         description: Solicitud inválida
- *         content:
- *           application/json:
- *             example: 
- *               error: "Parámetros incorrectos"
- *       500:
- *         description: Error interno del servidor
- *         content:
- *           application/json:
- *             example: 
- *               error: "Error al obtener los usuarios"
+ *         description: Lista de usuarios
  */
-router.get("/", getUsers);
+router.get('/', verifyToken, checkRole(['Administrador']), async (req, res, next) => {
+  try {
+    const users = await userService.findAll();
+    res.status(200).json({ success: true, data: users });
+  } catch (error) {
+    next(error);
+  }
+});
 
 export default router;

@@ -1,47 +1,44 @@
-// app/src/docs/swagger.ts
+import swaggerJSDoc, { Options } from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+import { Application } from 'express';
 
-/**
- * Swagger Configuration
- * ---------------------
- * Este archivo configura la documentación automática de la API
- * utilizando `swagger-jsdoc` y `swagger-ui-express`.
- *
- * - Genera un esquema OpenAPI (3.0.0).
- * - Extrae la documentación de las anotaciones JSDoc ubicadas en `src/routes/*.ts`.
- *
- * Acceso a la documentación:
- *  - La especificación generada es consumida por `swagger-ui-express`.
- *  - Disponible en `/api/docs` (ver `server.ts`).
- */
-
-import swaggerJSDoc from "swagger-jsdoc";
-
-/**
- * Opciones de configuración para swagger-jsdoc.
- *
- * `definition`:
- *  - Define la versión de OpenAPI.
- *  - Contiene información básica de la API (título, versión, descripción).
- *
- * `apis`:
- *  - Indica la ruta donde se ubican los archivos con anotaciones JSDoc
- *    que describen los endpoints (en este caso, los archivos de rutas).
- */
-const options = {
+const swaggerOptions: Options = {
   definition: {
-    openapi: "3.0.0",
+    openapi: '3.0.0',
     info: {
-      title: "API Example",
-      version: "1.0.0",
-      description: "Documentación generada automáticamente con Swagger para la API de ejemplo.",
+      title: 'RiwiMediCare Plus API',
+      version: '1.0.0',
+      description: 'API REST para gestionar las solicitudes de abastecimiento de medicamentos.',
     },
+    servers: [
+      {
+        url: 'http://localhost:3000',
+        description: 'Servidor Local',
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+    // Aplica el candado de seguridad globalmente
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ],
   },
-  apis: ["./src/routes/*.ts"],// Escanea las rutas para extraer anotaciones Swagger
+  // Le indicamos a Swagger dónde buscar los comentarios JSDoc
+  apis: ['./src/routes/*.ts'], 
 };
 
+const swaggerSpec = swaggerJSDoc(swaggerOptions);
 
-/**
- * Esquema de especificación Swagger/OpenAPI generado dinámicamente.
- * Este objeto es exportado y utilizado por `swagger-ui-express`.
- */
-export const swaggerSpec = swaggerJSDoc(options);
+export const swaggerDocs = (app: Application, port: number | string): void => {
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  console.log(`📄 Documentación Swagger disponible en http://localhost:${port}/api/docs`);
+};

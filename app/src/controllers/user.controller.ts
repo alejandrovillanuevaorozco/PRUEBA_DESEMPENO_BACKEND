@@ -1,8 +1,6 @@
 import { Request, Response } from "express";
-
 import userService from "../services/user.service";
-import { CreateUserDto } from "../dto/create-user.dto";
-import AppError from "../error/appError";
+import { AppError } from '../error/appError';
 
 /**
  * ============================================================================
@@ -79,37 +77,6 @@ import AppError from "../error/appError";
  * Cualquier excepción generada por la capa de servicios será capturada
  * y retornada como una respuesta HTTP con código 500.
  */
-export const createUser = async (req: Request, res: Response): Promise<Response> => {
-
-    try {
-
-        // Construcción del DTO recibido desde el cliente.
-        // toma todos los datos que llegaron en el body de la peticion  
-        // los guarda en dto
-        const dto: CreateUserDto = req.body;
-
-        // Delega la lógica de negocio al servicio.
-        const user = await userService.create(dto);
-
-        // Retorna el recurso creado.
-        return res.status(201).json(user);
-
-    } catch (error: any) {
-
-        // Manejo de errores personalizados de la aplicación.
-        if (error instanceof AppError) {
-            return res.status(error.status).json({
-                message: error.message
-            });
-        }
-    
-        // Manejo de errores inesperados.
-        return res.status(500).json({
-            error: error.message
-        });
-    }
-
-};
 
 /**
  * Obtiene el listado completo de usuarios.
